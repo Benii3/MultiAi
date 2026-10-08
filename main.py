@@ -2,6 +2,7 @@ import os
 import sqlite3
 import threading
 import requests
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from dotenv import load_dotenv
 import telebot
 from telebot import types
@@ -482,12 +483,21 @@ def groq_timeout(chat_id):
         reply_markup=ai_chose()
     )
 
+
 def send_to_groq(text):
+
     response = groq_client.chat.completions.create(
         model="openai/gpt-oss-20b",
-        messages=[{"role": "user", "content": text}]
+        messages=[
+            {
+                "role": "user",
+                "content": text
+            }
+        ]
     )
+
     return response.choices[0].message.content
+
 
 def translate_image_prompt(text):
 
@@ -886,6 +896,37 @@ def audio_finder(message):
         f"فایل صوتی با موفقیت دریافت و ذخیره شد ✅\n"
         f"📁 {file_name}"
     )
+
+
+class HealthHandler(BaseHTTPRequestHandler):
+
+    def do_GET(self):
+
+        self.send_response(200)
+        self.send_header("Content-Type", "text/plain")
+        self.end_headers()
+        self.wfile.write(b"MultiAI is running")
+
+    def log_message(self, format, *args):
+        return
+
+
+def run_server():
+
+    port = int(os.environ.get("PORT", 10000))
+
+    server = HTTPServer(
+        ("0.0.0.0", port),
+        HealthHandler
+    )
+
+    server.serve_forever()
+
+
+threading.Thread(
+    target=run_server,
+    daemon=True
+).start()
 
 
 bot.infinity_polling(
